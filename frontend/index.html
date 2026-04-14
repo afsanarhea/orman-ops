@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORMÁN-Ops | Wildfire Emergency Operations Agent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080c14;color:#e2e8f0;font-family:'Outfit',sans-serif;min-height:100vh}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#0f1724}
+::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+
+.app-container{max-width:1400px;margin:0 auto;padding:1rem}
+
+/* Header */
+.header{text-align:center;padding:1.5rem 0 1rem}
+.header h1{font-size:2.6rem;font-weight:800;background:linear-gradient(135deg,#ff6b35,#ffd700,#ff4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.02em}
+.header .sub{color:#64748b;font-size:0.9rem;font-weight:300;margin-top:0.2rem}
+.header .tech{color:#475569;font-size:0.75rem;margin-top:0.3rem}
+
+/* Region Selector */
+.selector-bar{display:flex;gap:1rem;align-items:end;margin:1rem 0;flex-wrap:wrap}
+.selector-bar select{flex:1;min-width:250px;background:#111827;border:1px solid #1e293b;color:#e2e8f0;padding:0.7rem 1rem;border-radius:10px;font-family:'Outfit';font-size:0.95rem;cursor:pointer;outline:none;transition:border 0.3s}
+.selector-bar select:focus{border-color:#f59e0b}
+.selector-bar select option{background:#111827}
+.run-btn{background:linear-gradient(135deg,#dc2626,#ea580c);color:white;border:none;padding:0.7rem 2rem;border-radius:10px;font-family:'Outfit';font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.3s;letter-spacing:0.03em;white-space:nowrap}
+.run-btn:hover{box-shadow:0 5px 30px rgba(220,38,38,0.4);transform:translateY(-1px)}
+.run-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.region-info{font-size:0.8rem;color:#64748b;margin-top:0.3rem}
+
+/* Pipeline */
+.pipeline{display:flex;justify-content:center;gap:0;padding:1.2rem 0;flex-wrap:wrap;align-items:center}
+.pipe-node{padding:0.5rem 0.9rem;border-radius:8px;font-family:'JetBrains Mono';font-size:0.7rem;font-weight:600;text-align:center;min-width:100px;transition:all 0.4s;border:1px solid #1e293b;background:#111827;color:#475569}
+.pipe-node.active{background:#1e3a5f;color:#60a5fa;border-color:#3b82f6;box-shadow:0 0 20px rgba(59,130,246,0.3);animation:glow 2s infinite}
+.pipe-node.complete{background:#14532d;color:#4ade80;border-color:#22c55e}
+.pipe-arrow{color:#334155;font-size:1rem;padding:0 0.2rem}
+.pipe-arrow.active{color:#60a5fa}
+@keyframes glow{0%,100%{box-shadow:0 0 10px rgba(59,130,246,0.2)}50%{box-shadow:0 0 25px rgba(59,130,246,0.5)}}
+
+/* Confidence Meter */
+.confidence-bar{margin:0.8rem 0;padding:0.8rem 1.2rem;background:#111827;border-radius:10px;border:1px solid #1e293b}
+.conf-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem}
+.conf-label{font-size:0.8rem;color:#94a3b8;font-weight:500}
+.conf-value{font-size:1.1rem;font-weight:700;color:#fbbf24;font-family:'JetBrains Mono'}
+.conf-track{height:6px;background:#1e293b;border-radius:3px;overflow:hidden}
+.conf-fill{height:100%;border-radius:3px;transition:width 0.8s ease-out;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e)}
+
+/* Main Layout */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+
+/* Thinking Log */
+.log-panel{background:#0f1724;border:1px solid #1e293b;border-radius:12px;max-height:600px;overflow-y:auto}
+.log-header{padding:0.8rem 1rem;border-bottom:1px solid #1e293b;font-weight:600;font-size:0.9rem;display:flex;align-items:center;gap:0.5rem;position:sticky;top:0;background:#0f1724;z-index:1}
+.log-body{padding:0.5rem}
+
+.log-entry{padding:0.6rem 0.8rem;margin:0.3rem 0;border-radius:8px;font-size:0.82rem;line-height:1.5;position:relative;border-left:3px solid transparent;animation:slideIn 0.3s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+
+.log-entry.thinking{background:#0c1929;border-left-color:#3b82f6}
+.log-entry.reasoning{background:#1a1a0e;border-left-color:#f59e0b}
+.log-entry.tool_call{background:#0e1a14;border-left-color:#10b981}
+.log-entry.tool_result{background:#0f1724;border-left-color:#22d3ee}
+.log-entry.error{background:#1a0e0e;border-left-color:#ef4444}
+.log-entry.complete{background:#0e0f1a;border-left-color:#8b5cf6}
+
+.log-tag{display:inline-block;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:0.15rem 0.5rem;border-radius:4px;margin-bottom:0.3rem}
+.log-tag.thinking{background:#1e3a5f;color:#60a5fa}
+.log-tag.reasoning{background:#422006;color:#fbbf24}
+.log-tag.tool_call{background:#052e16;color:#4ade80}
+.log-tag.tool_result{background:#083344;color:#22d3ee}
+.log-tag.error{background:#450a0a;color:#fca5a5}
+.log-tag.complete{background:#2e1065;color:#c4b5fd}
+
+.log-text{color:#cbd5e1;font-family:'JetBrains Mono';font-size:0.78rem;word-break:break-word}
+.log-tool-badge{display:inline-flex;align-items:center;gap:0.3rem;background:#1e293b;padding:0.2rem 0.6rem;border-radius:5px;font-size:0.72rem;color:#94a3b8;margin-top:0.3rem}
+
+/* Report Panel */
+.report-panel{background:#0f1724;border:1px solid #1e293b;border-radius:12px;max-height:600px;overflow-y:auto}
+.report-header{padding:0.8rem 1rem;border-bottom:1px solid #1e293b;font-weight:600;font-size:0.9rem;position:sticky;top:0;background:#0f1724;z-index:1}
+
+/* Threat Badge */
+.threat-badge{display:inline-block;padding:0.3rem 1rem;border-radius:20px;font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.08em;text-align:center}
+.threat-CRITICAL{background:#dc2626;color:white;animation:pulsered 1.5s infinite}
+.threat-HIGH{background:#ea580c;color:white}
+.threat-MODERATE{background:#d97706;color:white}
+.threat-LOW{background:#16a34a;color:white}
+.threat-MINIMAL{background:#0d9488;color:white}
+@keyframes pulsered{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.4)}50%{box-shadow:0 0 20px 5px rgba(220,38,38,0.2)}}
+
+/* Report Cards */
+.rcard{background:#111827;border:1px solid #1e293b;border-radius:10px;padding:1rem;margin:0.5rem 0.8rem}
+.rcard h4{color:#f8fafc;font-size:0.85rem;font-weight:600;margin-bottom:0.5rem}
+.rcard-row{display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #1a2332}
+.rcard-row:last-child{border-bottom:none}
+.rcard-label{color:#94a3b8;font-size:0.78rem}
+.rcard-value{color:#f1f5f9;font-weight:600;font-size:0.78rem}
+
+/* Resource boxes */
+.resources-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:0.5rem;margin:0.5rem 0.8rem}
+.res-box{background:#111827;border:1px solid #1e293b;border-radius:8px;padding:0.6rem;text-align:center}
+.res-num{font-size:1.4rem;font-weight:800;color:#fbbf24}
+.res-label{font-size:0.6rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em}
+
+/* Actions */
+.action-item{background:#111827;border-left:3px solid #f59e0b;padding:0.5rem 0.8rem;margin:0.3rem 0.8rem;border-radius:0 6px 6px 0;font-size:0.75rem;color:#cbd5e1;font-family:'JetBrains Mono';line-height:1.4}
+
+/* Map */
+.map-section{margin-top:1rem}
+.map-container{height:350px;border-radius:12px;overflow:hidden;border:1px solid #1e293b}
+#fire-map{height:100%;width:100%}
+
+/* Empty state */
+.empty-state{text-align:center;padding:3rem;color:#475569}
+.empty-state .icon{font-size:3rem;margin-bottom:1rem}
+.empty-state p{font-size:0.9rem;line-height:1.6}
+
+/* Download button */
+.dl-btn{background:#1e293b;color:#e2e8f0;border:1px solid #334155;padding:0.5rem 1.2rem;border-radius:8px;font-family:'Outfit';font-size:0.85rem;cursor:pointer;transition:all 0.3s;margin:0.5rem 0.8rem}
+.dl-btn:hover{background:#334155}
+
+/* Footer */
+.footer{text-align:center;color:#334155;font-size:0.7rem;padding:1.5rem;margin-top:1rem}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const TOOL_META = {
+  fetch_fires: { icon: "🛰️", label: "Fetch Fires", pipeLabel: "🛰 Fires" },
+  check_weather: { icon: "🌤️", label: "Check Weather", pipeLabel: "🌤 Weather" },
+  assess_regional_risk: { icon: "📊", label: "Regional Risk", pipeLabel: "📊 Risk" },
+  analyze_threat: { icon: "⚠️", label: "Analyze Threat", pipeLabel: "⚠️ Threat" },
+  plan_response: { icon: "🚨", label: "Plan Response", pipeLabel: "🚨 Plan" },
+  generate_report: { icon: "📋", label: "Gen. Report", pipeLabel: "📋 Report" },
+};
+
+const PIPELINE_ORDER = ["fetch_fires","check_weather","assess_regional_risk","analyze_threat","plan_response","generate_report"];
+
+function App() {
+  const [regions, setRegions] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [regionInfo, setRegionInfo] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [steps, setSteps] = useState([]);
+  const [completedTools, setCompletedTools] = useState(new Set());
+  const [activeTool, setActiveTool] = useState("");
+  const [confidence, setConfidence] = useState(0);
+  const [report, setReport] = useState(null);
+  const [fireLocations, setFireLocations] = useState([]);
+  const logEndRef = useRef(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+
+  // Fetch regions on mount
+  useEffect(() => {
+    fetch("/api/regions")
+      .then(r => r.json())
+      .then(data => {
+        setRegions(data.regions || []);
+        if (data.regions?.length > 0) {
+          setSelectedRegion(data.regions[0].name);
+          setRegionInfo(data.regions[0]);
+        }
+      })
+      .catch(e => console.error("Failed to load regions:", e));
+  }, []);
+
+  // Auto-scroll log
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [steps]);
+
+  // Update map when fire locations change
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = L.map(mapRef.current).setView([48.0, 68.0], 5);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+      }).addTo(mapInstanceRef.current);
+    }
+    
+    const map = mapInstanceRef.current;
+    
+    // Clear existing markers
+    map.eachLayer(l => { if (l instanceof L.Marker || l instanceof L.CircleMarker) map.removeLayer(l); });
+    
+    if (fireLocations.length > 0) {
+      const bounds = [];
+      fireLocations.forEach(loc => {
+        const marker = L.circleMarker([loc.lat, loc.lon], {
+          radius: 8, color: "#ff4444", fillColor: "#ff6b35", fillOpacity: 0.8, weight: 2,
+        }).addTo(map);
+        marker.bindPopup(`🔥 Fire Detection<br>Lat: ${loc.lat.toFixed(4)}<br>Lon: ${loc.lon.toFixed(4)}`);
+        bounds.push([loc.lat, loc.lon]);
+      });
+      if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (regionInfo) {
+      map.setView([regionInfo.lat, regionInfo.lon], 7);
+      L.marker([regionInfo.lat, regionInfo.lon]).addTo(map)
+        .bindPopup(`📍 ${regionInfo.name}`).openPopup();
+    }
+  }, [fireLocations, regionInfo]);
+
+  const handleRegionChange = (e) => {
+    const name = e.target.value;
+    setSelectedRegion(name);
+    const info = regions.find(r => r.name === name);
+    setRegionInfo(info);
+    // Reset map view
+    if (mapInstanceRef.current && info) {
+      mapInstanceRef.current.setView([info.lat, info.lon], 7);
+    }
+  };
+
+  const runAgent = useCallback(() => {
+    if (!selectedRegion || running) return;
+    
+    setRunning(true);
+    setSteps([]);
+    setCompletedTools(new Set());
+    setActiveTool("");
+    setConfidence(20);
+    setReport(null);
+    setFireLocations([]);
+    
+    const evtSource = new EventSource(`/api/run/${encodeURIComponent(selectedRegion)}`);
+    
+    evtSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === "stream_end") {
+          evtSource.close();
+          setRunning(false);
+          setActiveTool("");
+          return;
+        }
+        
+        // Update confidence
+        if (data.confidence !== undefined) {
+          setConfidence(data.confidence);
+        }
+        
+        // Track active/completed tools
+        if (data.type === "tool_call" && data.tool) {
+          setActiveTool(data.tool);
+        }
+        if (data.type === "tool_result" && data.tool) {
+          setCompletedTools(prev => new Set([...prev, data.tool]));
+          setActiveTool("");
+          
+          // Extract fire locations
+          if (data.tool === "analyze_threat" && data.result?.fire_locations) {
+            setFireLocations(data.result.fire_locations);
+          }
+          if (data.tool === "fetch_fires" && data.result?.fire_count > 0 && data.result?.data) {
+            const locs = data.result.data.slice(0, 30).map(f => ({
+              lat: parseFloat(f.latitude), lon: parseFloat(f.longitude)
+            })).filter(l => !isNaN(l.lat) && !isNaN(l.lon));
+            if (locs.length > 0) setFireLocations(locs);
+          }
+        }
+        
+        // Capture report
+        if (data.type === "complete" && data.report) {
+          setReport(data.report);
+        }
+        
+        // Add step to log
+        setSteps(prev => [...prev, data]);
+        
+      } catch (e) {
+        console.error("Parse error:", e);
+      }
+    };
+    
+    evtSource.onerror = () => {
+      evtSource.close();
+      setRunning(false);
+      setActiveTool("");
+    };
+  }, [selectedRegion, running]);
+
+  const downloadReport = () => {
+    if (!report) return;
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orman_ops_${selectedRegion.replace(/\s+/g, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="app-container">
+      {/* Header */}
+      <div className="header">
+        <h1>🔥 ORMÁN-Ops</h1>
+        <div className="sub">Autonomous Wildfire Emergency Operations Agent for Kazakhstan</div>
+        <div className="tech">NASA FIRMS · VIIRS · Open-Meteo · Llama 3.3 70B on Groq LPU</div>
+      </div>
+
+      {/* Region Selector */}
+      <div className="selector-bar">
+        <div style={{flex:1}}>
+          <select value={selectedRegion} onChange={handleRegionChange}>
+            <optgroup label="🌲 Fire-Prone Forest Areas">
+              {regions.filter(r => ["Semey Ormanı","Burabay","Bayanaul","Karkaraly"].includes(r.name)).map(r => (
+                <option key={r.name} value={r.name}>{r.name} — {r.description_ru}</option>
+              ))}
+            </optgroup>
+            <optgroup label="📍 Regions">
+              {regions.filter(r => !["Semey Ormanı","Burabay","Bayanaul","Karkaraly"].includes(r.name)).map(r => (
+                <option key={r.name} value={r.name}>{r.name}</option>
+              ))}
+            </optgroup>
+          </select>
+          {regionInfo && (
+            <div className="region-info">
+              📍 {regionInfo.area} | 🌿 {regionInfo.vegetation} | 🔥 ~{regionInfo.historical_fires} fires/year | 📅 Season: {regionInfo.fire_season}
+            </div>
+          )}
+        </div>
+        <button className="run-btn" onClick={runAgent} disabled={running}>
+          {running ? "⏳ Agent Running..." : "🚀 Deploy Agent"}
+        </button>
+      </div>
+
+      {/* Pipeline */}
+      <div className="pipeline">
+        {PIPELINE_ORDER.map((tool, i) => {
+          const meta = TOOL_META[tool];
+          let cls = "pipe-node";
+          if (completedTools.has(tool)) cls += " complete";
+          else if (activeTool === tool) cls += " active";
+          return (
+            <React.Fragment key={tool}>
+              <div className={cls}>{meta.pipeLabel}</div>
+              {i < PIPELINE_ORDER.length - 1 && (
+                <span className={`pipe-arrow${completedTools.has(tool) ? " active" : ""}`}>→</span>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Confidence */}
+      <div className="confidence-bar">
+        <div className="conf-header">
+          <span className="conf-label">Agent Confidence / Уверенность агента</span>
+          <span className="conf-value">{confidence}%</span>
+        </div>
+        <div className="conf-track">
+          <div className="conf-fill" style={{width: `${confidence}%`}} />
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="main-grid">
+        {/* Left: Thinking Log */}
+        <div className="log-panel">
+          <div className="log-header">🧠 Agent Thinking Log / Лог рассуждений агента</div>
+          <div className="log-body">
+            {steps.length === 0 && !running && (
+              <div className="empty-state">
+                <div className="icon">🤖</div>
+                <p>Select a region and click "Deploy Agent" to start the autonomous analysis.</p>
+                <p style={{marginTop:"0.5rem",fontSize:"0.8rem"}}>Выберите регион и нажмите "Deploy Agent"</p>
+              </div>
+            )}
+            {steps.map((step, i) => (
+              <div key={i} className={`log-entry ${step.type}`}>
+                <div className="log-tag" style={{display:"inline-block"}}>
+                  <span className={`log-tag ${step.type}`}>
+                    {step.type === "thinking" && "🧠 THINKING"}
+                    {step.type === "reasoning" && "💭 REASONING"}
+                    {step.type === "tool_call" && `🔧 CALLING: ${step.tool}`}
+                    {step.type === "tool_result" && `✅ RESULT: ${step.tool}`}
+                    {step.type === "error" && "❌ ERROR"}
+                    {step.type === "complete" && "📋 COMPLETE"}
+                  </span>
+                </div>
+                <div className="log-text">{step.message}</div>
+                {step.tool && step.type === "tool_call" && (
+                  <div className="log-tool-badge">
+                    {TOOL_META[step.tool]?.icon} {TOOL_META[step.tool]?.label}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div ref={logEndRef} />
+          </div>
+        </div>
+
+        {/* Right: Report Panel */}
+        <div className="report-panel">
+          <div className="report-header">📋 Operational Report / Оперативный отчёт</div>
+          
+          {!report && (
+            <div className="empty-state">
+              <div className="icon">📊</div>
+              <p>Report will appear here after the agent completes its analysis.</p>
+              <p style={{marginTop:"0.5rem",fontSize:"0.8rem"}}>Отчёт появится после завершения анализа</p>
+            </div>
+          )}
+
+          {report && (
+            <>
+              {/* Threat Level */}
+              <div style={{textAlign:"center",padding:"1rem"}}>
+                <span className={`threat-badge threat-${report.executive_summary?.threat_level}`}>
+                  {report.executive_summary?.threat_level}
+                </span>
+                <div style={{color:"#94a3b8",marginTop:"0.4rem",fontSize:"0.8rem"}}>
+                  Score: {report.executive_summary?.threat_score}/100 | 
+                  Confidence: {report.executive_summary?.confidence_pct}%
+                </div>
+                <div style={{color:"#64748b",marginTop:"0.2rem",fontSize:"0.75rem"}}>
+                  {report.executive_summary?.scenario_description}
+                </div>
+              </div>
+
+              {/* Executive Summary */}
+              <div className="rcard">
+                <h4>📊 Summary / Сводка</h4>
+                <div className="rcard-row"><span className="rcard-label">Region</span><span className="rcard-value">{report.executive_summary?.region}</span></div>
+                <div className="rcard-row"><span className="rcard-label">Description</span><span className="rcard-value">{report.executive_summary?.region_description}</span></div>
+                <div className="rcard-row"><span className="rcard-label">Fires Detected</span><span className="rcard-value">{report.executive_summary?.fires_detected}</span></div>
+                <div className="rcard-row"><span className="rcard-label">Data Source</span><span className="rcard-value">{report.executive_summary?.data_source}</span></div>
+                <div className="rcard-row"><span className="rcard-label">Period</span><span className="rcard-value">{report.executive_summary?.monitoring_period}</span></div>
+                <div className="rcard-row"><span className="rcard-label">Alert</span><span className="rcard-value" style={{fontSize:"0.7rem"}}>{report.executive_summary?.alert_level}</span></div>
+              </div>
+
+              {/* Weather */}
+              {report.weather_conditions && Object.keys(report.weather_conditions).length > 0 && (
+                <div className="rcard">
+                  <h4>🌤️ Weather / Погода</h4>
+                  <div className="rcard-row"><span className="rcard-label">Temperature</span><span className="rcard-value">{report.weather_conditions.temperature_c}°C</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Humidity</span><span className="rcard-value">{report.weather_conditions.humidity_pct}%</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Wind</span><span className="rcard-value">{report.weather_conditions.wind_speed_kmh} km/h ({report.weather_conditions.wind_direction_compass})</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Gusts</span><span className="rcard-value">{report.weather_conditions.wind_gusts_kmh} km/h</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Fire Weather</span><span className="rcard-value">{report.fire_weather_index?.risk_level} ({report.fire_weather_index?.score}/100)</span></div>
+                </div>
+              )}
+
+              {/* Regional Risk */}
+              {report.regional_risk && Object.keys(report.regional_risk).length > 0 && (
+                <div className="rcard">
+                  <h4>📊 Regional Risk / Региональный риск</h4>
+                  <div className="rcard-row"><span className="rcard-label">Risk Level</span><span className="rcard-value">{report.regional_risk.risk_level} ({report.regional_risk.overall_risk_score}/100)</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Vegetation</span><span className="rcard-value">{report.regional_risk.vegetation_type}</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Historical Fires</span><span className="rcard-value">{report.regional_risk.historical_fires_per_year}/year</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Season</span><span className="rcard-value">{report.regional_risk.season_status}</span></div>
+                </div>
+              )}
+
+              {/* Resources */}
+              {report.response_plan?.resources && (
+                <>
+                  <div className="rcard"><h4>🚒 Resources / Ресурсы</h4></div>
+                  <div className="resources-grid">
+                    <div className="res-box"><div className="res-num">🚒 {report.response_plan.resources.fire_brigades}</div><div className="res-label">Fire Brigades</div></div>
+                    <div className="res-box"><div className="res-num">🚁 {report.response_plan.resources.helicopters}</div><div className="res-label">Helicopters</div></div>
+                    <div className="res-box"><div className="res-num">🚌 {report.response_plan.resources.evacuation_buses}</div><div className="res-label">Evac Buses</div></div>
+                    <div className="res-box"><div className="res-num">🏥 {report.response_plan.resources.medical_teams}</div><div className="res-label">Medical</div></div>
+                    <div className="res-box"><div className="res-num">💧 {report.response_plan.resources.water_tankers}</div><div className="res-label">Tankers</div></div>
+                  </div>
+                </>
+              )}
+
+              {/* Actions */}
+              {report.response_plan?.priority_actions?.length > 0 && (
+                <>
+                  <div className="rcard"><h4>⚡ Priority Actions / Приоритетные действия</h4></div>
+                  {report.response_plan.priority_actions.map((action, i) => (
+                    <div key={i} className="action-item">{action}</div>
+                  ))}
+                </>
+              )}
+
+              {/* Wind Info */}
+              {report.response_plan?.wind_info && report.response_plan.wind_info.speed_kmh > 0 && (
+                <div className="rcard">
+                  <h4>💨 Wind & Spread Risk / Ветер и риск распространения</h4>
+                  <div className="rcard-row"><span className="rcard-label">Wind Speed</span><span className="rcard-value">{report.response_plan.wind_info.speed_kmh} km/h</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Direction</span><span className="rcard-value">{report.response_plan.wind_info.direction}</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Fire Spread Direction</span><span className="rcard-value">⚠️ {report.response_plan.wind_info.spread_risk_direction}</span></div>
+                </div>
+              )}
+
+              {/* Coordination */}
+              {report.response_plan?.coordination && (
+                <div className="rcard">
+                  <h4>📞 Coordination / Координация</h4>
+                  <div className="rcard-row"><span className="rcard-label">Primary</span><span className="rcard-value" style={{fontSize:"0.7rem"}}>{report.response_plan.coordination.primary}</span></div>
+                  <div className="rcard-row"><span className="rcard-label">Secondary</span><span className="rcard-value" style={{fontSize:"0.7rem"}}>{report.response_plan.coordination.secondary}</span></div>
+                  <div className="rcard-row"><span className="rcard-label">National</span><span className="rcard-value" style={{fontSize:"0.7rem"}}>{report.response_plan.coordination.national}</span></div>
+                </div>
+              )}
+
+              {/* Download */}
+              <button className="dl-btn" onClick={downloadReport}>📥 Download Report / Скачать отчёт (JSON)</button>
+              <div style={{height:"0.5rem"}} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Map */}
+      <div className="map-section">
+        <div style={{fontSize:"0.9rem",fontWeight:600,marginBottom:"0.5rem"}}>
+          🗺️ Map / Карта {fireLocations.length > 0 ? `(${fireLocations.length} fire detections)` : ""}
+        </div>
+        <div className="map-container">
+          <div id="fire-map" ref={mapRef} />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="footer">
+        ORMÁN-Ops v2.0 | AI Agents Cup — Digital Farabi 2026 | 
+        Data: NASA FIRMS VIIRS · Open-Meteo | LLM: Llama 3.3 70B via Groq LPU | 
+        Built by Afsana — Al-Farabi Kazakh National University
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
+</html>
