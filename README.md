@@ -37,17 +37,18 @@ Four major fire-prone forest areas (Semey Ormanı, Burabay, Bayanaul, Karkaraly)
 ![Supported regions](docs/images/regions.png)
 
 ## Architecture
-head -5 README.md
-User Input (Region)
-→ Custom Agent Controller (GPT-OSS 120B via Groq LPU)
-→ Tool 1: NASA FIRMS API (satellite fire data)
-→ Tool 2: Open-Meteo API (weather conditions)
-→ Tool 3: Regional Risk Assessment (historical/environmental)
-→ Tool 4: Threat Analyzer (multi-source scoring)
-→ Tool 5: Response Planner (emergency or preventive)
-→ Tool 6: Report Generator (operational report)
-→ Interactive Dashboard + Fire Map
 
+```
+User Input (Region)
+    → Custom Agent Controller (GPT-OSS 120B via Groq LPU)
+        → Tool 1: NASA FIRMS API (satellite fire data)
+        → Tool 2: Open-Meteo API (weather conditions)
+        → Tool 3: Regional Risk Assessment (historical/environmental)
+        → Tool 4: Threat Analyzer (multi-source scoring)
+        → Tool 5: Response Planner (emergency or preventive)
+        → Tool 6: Report Generator (operational report)
+    → Interactive Dashboard + Fire Map
+```
 
 ## Tech Stack
 
@@ -59,13 +60,13 @@ User Input (Region)
 
 ## Setup
 
-```bash
+```
 cp .env.example .env
 pip install -r requirements.txt
 python main.py
 ```
 
-Then open `http://localhost:7860`.
+Then open http://localhost:7860
 
 ## Notes
 
