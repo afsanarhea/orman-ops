@@ -1,8 +1,5 @@
 ---
 title: ORMÁN-Ops
-**Live demo:** https://orman-ops.onrender.com
-
-*(Free hosting — the first request after inactivity may take up to a minute to wake the service.)*
 colorFrom: red
 colorTo: yellow
 sdk: docker
@@ -15,6 +12,10 @@ short_description: Autonomous Wildfire Emergency Operations Agent for Kazakhstan
 # ORMÁN-Ops: Wildfire Emergency Operations Agent
 
 An autonomous LLM-based agent for wildfire threat assessment and emergency response planning in Kazakhstan.
+
+**Live demo:** https://orman-ops.onrender.com
+
+*(Free hosting — the first request after inactivity may take up to a minute to wake the service.)*
 
 ![ORMÁN-Ops dashboard](docs/images/dashboard.png)
 
