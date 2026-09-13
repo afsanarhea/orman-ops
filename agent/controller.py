@@ -53,7 +53,7 @@ Available regions include priority forest areas like Semey Ormanı (world's larg
 
 
 class OrmanAgent:
-    def __init__(self, groq_api_key: str, firms_api_key: str, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, groq_api_key: str, firms_api_key: str, model: str = "openai/gpt-oss-120b"):
         self.client = Groq(api_key=groq_api_key)
         self.firms_api_key = firms_api_key
         self.model = model
